@@ -23,7 +23,24 @@ describe('Adversarial Stress Suite: Auth, Tokens, Injections & Concurrency', () 
   let seededAdminId: string;
 
   beforeAll(async () => {
-    // Clean up any previous stress test data
+    // Clean up any previous stress test data in proper relational order
+    await prisma.orderStatusHistory.deleteMany({
+      where: {
+        OR: [
+          { changedBy: { email: { contains: stressPrefix } } },
+          { order: { customer: { email: { contains: stressPrefix } } } },
+        ],
+      },
+    });
+    await prisma.order.deleteMany({
+      where: { customer: { email: { contains: stressPrefix } } },
+    });
+    await prisma.deliveryAgentProfile.deleteMany({
+      where: { user: { email: { contains: stressPrefix } } },
+    });
+    await prisma.address.deleteMany({
+      where: { user: { email: { contains: stressPrefix } } },
+    });
     await prisma.user.deleteMany({
       where: {
         email: {
@@ -73,7 +90,24 @@ describe('Adversarial Stress Suite: Auth, Tokens, Injections & Concurrency', () 
   });
 
   afterAll(async () => {
-    // Cleanup stress test records
+    // Cleanup stress test records in proper relational order
+    await prisma.orderStatusHistory.deleteMany({
+      where: {
+        OR: [
+          { changedBy: { email: { contains: stressPrefix } } },
+          { order: { customer: { email: { contains: stressPrefix } } } },
+        ],
+      },
+    });
+    await prisma.order.deleteMany({
+      where: { customer: { email: { contains: stressPrefix } } },
+    });
+    await prisma.deliveryAgentProfile.deleteMany({
+      where: { user: { email: { contains: stressPrefix } } },
+    });
+    await prisma.address.deleteMany({
+      where: { user: { email: { contains: stressPrefix } } },
+    });
     await prisma.user.deleteMany({
       where: {
         email: {
