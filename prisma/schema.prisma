@@ -1,0 +1,270 @@
+// /home/skrisps/lastmile/prisma/schema.prisma
+
+datasource db {
+  provider = "sqlite" // Set to "postgresql" in production via env or schema toggle
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// 1. User Identity & Authentication (R2)
+// ==========================================
+model User {
+  id           String                @id @default(cuid())
+  email        String                @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         String                @default("CUSTOMER") // "CUSTOMER" | "AGENT" | "ADMIN"
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  
+  addresses    Address[]
+  orders       Order[]               @relation("CustomerOrders")
+  agentProfile DeliveryAgentProfile?
+  statusEvents OrderStatusHistory[]  @relation("ChangedByUser")
+
+  @@index([role])
+  @@index([email])
+}
+
+// ==========================================
+// 2. Customer Address Book (R5)
+// ==========================================
+model Address {
+  id           String   @id @default(cuid())
+  userId       String
+  label        String?  // e.g., "Home", "Warehouse", "Headquarters", "Office"
+  street       String
+  city         String
+  state        String
+  pincode      String
+  contactName  String?
+  contactPhone String
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([pincode])
+}
+
+// ==========================================
+// 3. Dynamic Geographic Zones (R1)
+// ==========================================
+model Zone {
+  id          String             @id @default(cuid())
+  name        String             @unique // e.g. "North Metro", "South Suburban", "West Central", "East Industrial"
+  code        String             @unique // e.g. "ZONE_NORTH", "ZONE_SOUTH", "ZONE_WEST", "ZONE_EAST"
+  description String?
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  
+  pincodes    PincodeMapping[]
+  pickupOrders Order[]           @relation("PickupZone")
+  dropOrders   Order[]           @relation("DropZone")
+  agentZones  AgentZoneMapping[]
+
+  @@index([code])
+  @@index([isActive])
+}
+
+// ==========================================
+// 4. Pincode to Zone Mappings (R1)
+// ==========================================
+model PincodeMapping {
+  id        String   @id @default(cuid())
+  pincode   String   @unique
+  areaName  String?
+  zoneId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  zone      Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@index([pincode])
+  @@index([zoneId])
+}
+
+// ==========================================
+// 5. Dynamic Rate Cards (Zero Hardcoding) (R1)
+// ==========================================
+model RateCard {
+  id                  String   @id @default(cuid())
+  zoneType            String   // "INTRA_ZONE" | "INTER_ZONE"
+  customerType        String   // "B2B" | "B2C"
+  baseWeightKg        Float    @default(0.5)
+  baseRate            Float    // Flat base fee for packages <= baseWeightKg
+  perKgRate           Float    // Incremental fee per additional kg / fraction above baseWeightKg
+  volumetricDivisor   Float    @default(5000) // Standard divisor (L*B*H)/5000
+  codFixedSurcharge   Float    @default(0.0)  // Fixed handling fee for COD
+  codPercentSurcharge Float    @default(0.0)  // Percentage surcharge on declared value
+  minCodSurcharge     Float    @default(0.0)  // Minimum floor fee for COD
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([zoneType, customerType, isActive])
+  @@index([zoneType, customerType])
+}
+
+// ==========================================
+// 6. Order Master Entity & Pricing Snapshot (R1, R2)
+// ==========================================
+model Order {
+  id                  String               @id @default(cuid())
+  trackingNumber      String               @unique // Format: "LMD-YYYYMMDD-XXXXX"
+  customerId          String
+  customerType        String               @default("B2C") // "B2B" | "B2C"
+  
+  // Sender Details (Origin)
+  senderName          String
+  senderPhone         String
+  senderStreet        String
+  senderCity          String
+  senderState         String
+  pickupPincode       String
+  pickupZoneId        String
+  
+  // Recipient Details (Destination)
+  recipientName       String
+  recipientPhone      String
+  recipientStreet     String
+  recipientCity       String
+  recipientState      String
+  dropPincode         String
+  dropZoneId          String
+  
+  // Physical Package Dimensions & Weight Calculations
+  packageLengthCm     Float
+  packageBreadthCm    Float
+  packageHeightCm     Float
+  actualWeightKg      Float
+  volumetricWeightKg  Float
+  billableWeightKg    Float
+  volumetricDivisor   Float                @default(5000)
+  
+  // Itemized Invoiced Snapshot Pricing
+  zoneType            String               // "INTRA_ZONE" | "INTER_ZONE"
+  basePrice           Float
+  weightPrice         Float
+  codSurcharge        Float                @default(0.0)
+  totalAmount         Float
+  
+  // Payment Information
+  isCod               Boolean              @default(false)
+  codAmount           Float                @default(0.0)
+  declaredValue       Float                @default(0.0)
+  
+  // Dispatch & Operational Scheduling
+  assignedAgentId     String?
+  scheduledDate       DateTime?
+  notes               String?
+  
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  
+  customer            User                 @relation("CustomerOrders", fields: [customerId], references: [id])
+  pickupZone          Zone                 @relation("PickupZone", fields: [pickupZoneId], references: [id])
+  dropZone            Zone                 @relation("DropZone", fields: [dropZoneId], references: [id])
+  assignedAgent       DeliveryAgentProfile? @relation(fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  
+  statusHistory       OrderStatusHistory[]
+  notifications       NotificationLog[]
+
+  @@index([trackingNumber])
+  @@index([customerId])
+  @@index([assignedAgentId])
+  @@index([pickupZoneId])
+  @@index([dropZoneId])
+  @@index([createdAt])
+}
+
+// ==========================================
+// 7. Append-Only Order Status Audit Ledger (R2)
+// ==========================================
+model OrderStatusHistory {
+  id          String   @id @default(cuid())
+  orderId     String
+  status      String   // "CREATED" | "ASSIGNED" | "PICKED_UP" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "FAILED" | "RESCHEDULED" | "CANCELLED"
+  changedById String?
+  reason      String?  // Mandatory on FAILED, optional for operational notes
+  notes       String?
+  metadata    String?  // Serialized JSON for telemetry (coordinates, attempt #, driver notes)
+  createdAt   DateTime @default(now())
+  
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedBy   User?    @relation("ChangedByUser", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+  @@index([status])
+  @@index([changedById])
+}
+
+// ==========================================
+// 8. Delivery Agent Profiles & Fleet State (R3)
+// ==========================================
+model DeliveryAgentProfile {
+  id                String             @id @default(cuid())
+  userId            String             @unique
+  status            String             @default("OFFLINE") // "AVAILABLE" | "OFFLINE" | "ON_DELIVERY"
+  vehicleType       String?            // "BIKE" | "VAN" | "TRUCK"
+  vehicleNumber     String?
+  maxCapacity       Int                @default(10)
+  activeOrdersCount Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  operationalZones  AgentZoneMapping[]
+  assignedOrders    Order[]
+
+  @@index([status])
+  @@index([userId])
+}
+
+// ==========================================
+// 9. Agent to Operational Zone Mappings (R3)
+// ==========================================
+model AgentZoneMapping {
+  id        String               @id @default(cuid())
+  agentId   String
+  zoneId    String
+  createdAt DateTime             @default(now())
+  
+  agent     DeliveryAgentProfile @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  zone      Zone                 @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, zoneId])
+  @@index([agentId])
+  @@index([zoneId])
+}
+
+// ==========================================
+// 10. Centralized Notification Audit Log (R4)
+// ==========================================
+model NotificationLog {
+  id             String   @id @default(cuid())
+  orderId        String
+  recipientEmail String
+  event          String   // e.g. "STATUS_CREATED", "STATUS_OUT_FOR_DELIVERY", "STATUS_FAILED"
+  subject        String
+  provider       String   // "RESEND" | "BREVO" | "MOCK_LOGGER"
+  status         String   // "SENT" | "FAILED"
+  errorMessage   String?
+  payload        String?  // Serialized JSON of email template payload
+  sentAt         DateTime @default(now())
+  
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([recipientEmail])
+  @@index([event])
+  @@index([sentAt])
+}
