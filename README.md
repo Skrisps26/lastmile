@@ -1,6 +1,10 @@
 # LastMile Logistics Platform
 
-LastMile is a delivery-management application for booking, pricing, dispatching, and tracking parcel orders. Customers can create and track shipments, admins configure service zones and rate cards, and delivery agents receive assigned work and advance its status through the delivery lifecycle. The application is currently a single Next.js application containing the web portals and API routes, backed by Supabase PostgreSQL through Prisma.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-unthikable.netlify.app-orange?style=for-the-badge&logo=netlify)](https://unthikable.netlify.app)
+
+**Live Production URL:** [https://unthikable.netlify.app](https://unthikable.netlify.app)
+
+LastMile is a modern last-mile delivery-management application for booking, dynamic pricing, dispatching, and tracking parcel orders. Customers can create and track shipments with upfront rate calculation, admins manage operational zones, rate cards, and dispatch queues, and delivery agents receive assigned deliveries and progress statuses in real time. The platform is built with Next.js 14 App Router, PostgreSQL (Supabase), Prisma, and Resend notifications.
 
 ## Tech stack
 
