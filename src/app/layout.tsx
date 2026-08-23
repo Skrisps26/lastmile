@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'lastmile. | Logistics, without the guesswork',
   description: 'A modern last-mile logistics operations platform.',
