@@ -19,6 +19,7 @@ import { lookupPincode, PincodeNotServiceableError } from '@/lib/rate-engine/det
 import { computeRateQuote } from '@/lib/rate-engine/calculator';
 import { type AuthSessionUser } from '@/lib/auth/jwt';
 import { releaseAgentOrder } from '@/lib/agents/assignment';
+import { notifyOrderStatusChange } from '@/lib/notifications/service';
 
 export class OrderNotFoundError extends Error {
   public readonly orderId: string;
@@ -211,6 +212,7 @@ export async function createOrder(data: CreateOrderInput, customerId: string) {
     };
   });
 
+  await notifyOrderStatusChange(result.id, 'CREATED', data.notes);
   return result;
 }
 
@@ -329,11 +331,14 @@ export async function transitionOrderStatus(
     throw new OrderNotFoundError(orderId);
   }
 
-  return {
+  const response = {
     ...updatedOrder,
     currentStatus: deriveCurrentStatus(updatedOrder.statusHistory),
     latestEvent: newHistoryRecord,
   };
+
+  await notifyOrderStatusChange(orderId, targetStatus, reason);
+  return response;
 }
 
 /** Compatibility alias for integrations using the original service name. */
@@ -458,6 +463,7 @@ export async function rescheduleOrder(
     };
   });
 
+  await notifyOrderStatusChange(orderId, 'RESCHEDULED', reason);
   return result;
 }
 

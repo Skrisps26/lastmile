@@ -14,6 +14,7 @@ import {
   ReleaseAgentResult,
   AgentStatus,
 } from './types';
+import { notifyOrderStatusChange } from '@/lib/notifications/service';
 
 // Serialize assignments for the same order in a Node process. This prevents
 // SQLite write-lock storms and duplicate work; the conditional claim below is
@@ -185,7 +186,9 @@ export async function autoAssignOrder(orderId: string): Promise<AutoAssignResult
     return { success: false, reason: 'Order was already assigned by another request.' };
   }
 
-  return {
+  await notifyOrderStatusChange(order.id, 'ASSIGNED');
+
+  const response = {
     success: true,
     assignedAgent: {
       id: selectedAgent.id,
@@ -205,6 +208,7 @@ export async function autoAssignOrder(orderId: string): Promise<AutoAssignResult
       currentStatus: 'ASSIGNED',
     },
   };
+  return response;
   });
 }
 
@@ -357,7 +361,7 @@ export async function manualAssignOrder(
     return updated;
   });
 
-  return {
+  const response = {
     success: true,
     order: {
       ...updatedOrder,
@@ -373,6 +377,9 @@ export async function manualAssignOrder(
       maxCapacity: agent.maxCapacity,
     },
   };
+
+  await notifyOrderStatusChange(order.id, 'ASSIGNED');
+  return response;
 }
 
 /**

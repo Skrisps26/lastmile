@@ -11,7 +11,7 @@ LastMile is a delivery-management application for booking, pricing, dispatching,
 - JWT session tokens stored in an HTTP-only cookie
 - `bcryptjs` for password hashing and `zod` for request validation
 - Vitest for unit and integration tests
-- Optional Resend dependency/configuration is present, but notification delivery is not wired into the status service yet
+- Resend-backed centralized email notifications with a mock/audit mode for development
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ cp .env.example .env
 - `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`: optional client configuration. The current backend uses Prisma/JWT rather than the Supabase Auth client.
 - `JWT_SECRET` and `NEXTAUTH_SECRET`: secrets for local session signing/configuration; use long, unique production secrets.
 - `NODE_ENV`, `PORT`, and `NEXT_PUBLIC_APP_URL`.
-- `NOTIFICATION_PROVIDER`, `RESEND_API_KEY`, and `NOTIFICATION_FROM_EMAIL`: reserved notification configuration. The current default is `mock`, but no centralized sender is connected yet.
+- `NOTIFICATION_PROVIDER`, `RESEND_API_KEY`, and `NOTIFICATION_FROM_EMAIL`: notification configuration. Set the provider to `resend` with a verified sender and API key for real email; the default `mock` provider records successful notification events without sending email.
 
 Never commit `.env` or real database credentials.
 
@@ -209,7 +209,7 @@ The PostgreSQL Prisma schema contains these tables/models:
 - `OrderStatusHistory`: append-only order event ledger with status, actor, reason, notes, metadata, and timestamp. It belongs to an `Order` and optionally a `User`.
 - `DeliveryAgentProfile`: one-to-one with `User`; stores availability, vehicle, capacity, and active load. It has many assigned `Order` records and `AgentZoneMapping` records.
 - `AgentZoneMapping`: join table between agents and zones with a unique `(agentId, zoneId)` pair.
-- `NotificationLog`: per-order notification audit record with recipient, event, provider, delivery status, error, payload, and timestamp. It is currently schema-only; no status service writes to it.
+- `NotificationLog`: per-order notification audit record with recipient, event, provider, delivery status, error, payload, and timestamp. The centralized notification service writes one record for each order status event.
 
 Foreign keys use cascading deletion for user-owned addresses, agent mappings, and order history/notifications where appropriate; order zone/customer references are retained with restrictive or `SET NULL` behavior to preserve operational history.
 
@@ -231,6 +231,6 @@ weightPrice        = round2(excessWeightKg × perKgRate)
 ## Not yet implemented / limitations
 
 - The three role-separated frontend portals are implemented in the Next.js app and use the current API for login, order creation/listing, agent status updates, and admin order creation/export. Some secondary profile/settings/help and advanced dashboard controls remain presentational placeholders.
-- Centralized email notifications are not implemented. `NotificationLog`, notification environment variables, and the `resend` dependency exist, but status transitions, assignment, and rescheduling do not currently call an email sender or write notification records.
+- SMS notifications are not implemented; the project specification requires email only. Email notifications are centralized and implemented. With `NOTIFICATION_PROVIDER=mock`, they are audited in `NotificationLog` without external delivery; with `resend`, status events send email to the customer and record `SENT` or `FAILED`.
 - Auto-assignment is zone/capacity/load based. The schema has no latitude/longitude fields, so it does not compute geographic distance or GPS-nearest agents.
 - Deployment configuration and a hosted application URL are not included in this repository.
