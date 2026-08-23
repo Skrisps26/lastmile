@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -57,7 +58,7 @@ function Avatar({ initials, color = 'indigo', small = false }: { initials: strin
   return <span className={`avatar avatar-${color} ${small ? 'avatar-small' : ''}`}>{initials}</span>;
 }
 
-function Sidebar({ role, setRole, mobileOpen, setMobileOpen }: { role: Role; setRole: (role: Role) => void; mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) {
+function Sidebar({ role, mobileOpen, setMobileOpen }: { role: Role; mobileOpen: boolean; setMobileOpen: (open: boolean) => void }) {
   const nav = role === 'customer'
     ? [['Overview', LayoutDashboard], ['My orders', Package], ['Addresses', MapPin], ['Billing', CreditCard]]
     : role === 'agent'
@@ -65,7 +66,7 @@ function Sidebar({ role, setRole, mobileOpen, setMobileOpen }: { role: Role; set
       : [['Command center', LayoutDashboard], ['Orders', Package], ['Agents', Users], ['Zones & rates', Gauge]];
   return <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
     <div className="brand"><span className="brand-mark"><Zap size={17} fill="currentColor" /></span><span>lastmile<span className="brand-dot">.</span></span></div>
-    <div className="workspace-switcher"><div className="eyebrow">Workspace</div><button className="workspace-button"><span className={`workspace-icon workspace-${role}`}><ShieldCheck size={15} /></span><span>{role === 'customer' ? 'Customer portal' : role === 'agent' ? 'Agent console' : 'Admin command'}</span><ChevronDown size={15} /></button></div>
+    <div className="workspace-switcher"><div className="eyebrow">Signed in as</div><div className="workspace-button"><span className={`workspace-icon workspace-${role}`}><ShieldCheck size={15} /></span><span>{role === 'customer' ? 'Customer portal' : role === 'agent' ? 'Agent console' : 'Admin command'}</span></div></div>
     <nav className="sidebar-nav">
       <div className="eyebrow">Menu</div>
       {nav.map(([label, Icon]) => <button className={`nav-item ${label === nav[0][0] ? 'active' : ''}`} key={label as string} onClick={() => setMobileOpen(false)}><Icon size={17} /><span>{label as string}</span>{label === 'My orders' && <span className="nav-count">3</span>}</button>)}
@@ -110,10 +111,39 @@ function CreateShipment({ onClose }: { onClose: () => void }) {
   return <div className="modal-backdrop" onClick={onClose}><div className="modal" onClick={(e) => e.stopPropagation()}><div className="modal-header"><div><div className="eyebrow accent-eyebrow">New shipment · Step {step} of 2</div><h2>Create a shipment</h2></div><button className="icon-button subtle" onClick={onClose}><X size={19} /></button></div><div className="stepper"><span className="step active"><b>1</b> Route</span><span className="step-line" /><span className={`step ${step === 2 ? 'active' : ''}`}><b>2</b> Package</span></div>{step === 1 ? <div className="modal-body"><label>Pickup pincode<input placeholder="e.g. 560038" /></label><label>Drop-off pincode<input placeholder="e.g. 560034" /></label><div className="two-fields"><label>Pickup area<input placeholder="Indiranagar" /></label><label>Drop-off area<input placeholder="Koramangala" /></label></div><div className="quote-preview"><div><span className="mini-label">Estimated delivery</span><strong>Today · 2–4 hours</strong></div><div><span className="mini-label">From</span><strong>₹180 <small>onwards</small></strong></div></div><button className="button button-primary full-width" onClick={() => setStep(2)}>Continue to package <ArrowRight size={16} /></button></div> : <div className="modal-body"><label>Package description<input placeholder="What are you sending?" defaultValue="Documents & small parcel" /></label><div className="two-fields"><label>Weight (kg)<input placeholder="1.0" /></label><label>Payment type<select defaultValue="Prepaid"><option>Prepaid</option><option>Cash on delivery</option></select></label></div><label>Delivery notes<textarea placeholder="Anything your agent should know?" defaultValue="Please call on arrival." /></label><div className="quote-preview final"><div><span className="mini-label">Your quote</span><strong>₹248.00</strong></div><span className="soft-text">Includes taxes · no hidden fees</span></div><button className="button button-primary full-width" onClick={onClose}>Confirm shipment <Check size={16} /></button></div>}</div></div>;
 }
 
-export default function HomePage() {
-  const [role, setRole] = useState<Role>('customer');
+export function Dashboard() {
+  const pathname = usePathname();
+  const role: Role = pathname.includes('/admin') ? 'admin' : pathname.includes('/agent') ? 'agent' : 'customer';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const content = useMemo(() => role === 'customer' ? <CustomerView onCreate={() => setShowCreate(true)} /> : role === 'agent' ? <AgentView /> : <AdminView />, [role]);
-  return <div className="app-shell"><Sidebar role={role} setRole={setRole} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} /><div className="app-main"><Topbar role={role} setMobileOpen={setMobileOpen} /><main className="main-content"><div className="role-switch"><span>Preview workspace</span><button className={role === 'customer' ? 'active' : ''} onClick={() => setRole('customer')}>Customer</button><button className={role === 'agent' ? 'active' : ''} onClick={() => setRole('agent')}>Agent</button><button className={role === 'admin' ? 'active' : ''} onClick={() => setRole('admin')}>Admin</button></div>{content}</main><footer className="app-footer"><span>lastmile<span className="brand-dot">.</span> operations platform</span><span>All systems operational <span className="pulse" /></span></footer></div>{showCreate && <CreateShipment onClose={() => setShowCreate(false)} />}</div>;
+  const content = role === 'customer' ? <CustomerView onCreate={() => setShowCreate(true)} /> : role === 'agent' ? <AgentView /> : <AdminView />;
+  return <div className="app-shell"><Sidebar role={role} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} /><div className="app-main"><Topbar role={role} setMobileOpen={setMobileOpen} /><main className="main-content">{content}</main><footer className="app-footer"><span>lastmile<span className="brand-dot">.</span> operations platform</span><span>All systems operational <span className="pulse" /></span></footer></div>{showCreate && <CreateShipment onClose={() => setShowCreate(false)} />}</div>;
+}
+
+function LoginScreen() {
+  const router = useRouter();
+  const [role, setRole] = useState<Role>('customer');
+  const [email, setEmail] = useState('customer@lastmile.local');
+  const [password, setPassword] = useState('Password123!');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const roleDefaults: Record<Role, string> = { customer: 'customer@lastmile.local', agent: 'agent1@lastmile.local', admin: 'admin@lastmile.local' };
+  const handleRole = (nextRole: Role) => { setRole(nextRole); setEmail(roleDefaults[nextRole]); setError(''); };
+  const handleLogin = async () => {
+    setLoading(true); setError('');
+    try {
+      const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Unable to sign in');
+      if (data.user?.role !== role.toUpperCase()) throw new Error(`This account belongs to the ${String(data.user?.role || '').toLowerCase()} workspace.`);
+      const redirect = new URLSearchParams(window.location.search).get('redirect');
+      router.push(redirect || (role === 'customer' ? '/customer' : role === 'agent' ? '/agent' : '/admin'));
+    } catch (loginError) { setError(loginError instanceof Error ? loginError.message : 'Unable to sign in'); } finally { setLoading(false); }
+  };
+  return <main className="login-page"><div className="login-brand"><span className="brand-mark"><Zap size={17} fill="currentColor" /></span><span>lastmile<span className="brand-dot">.</span></span></div><div className="login-layout"><section className="login-intro"><span className="hero-kicker"><Sparkles size={14} /> The delivery operating system</span><h1>Move every<br /><em>promise</em> forward.</h1><p>One calm, clear workspace for the people sending, moving, and managing what matters.</p><div className="login-proof"><div className="proof-avatars"><Avatar initials="AM" color="indigo" small /><Avatar initials="PS" color="orange" small /><Avatar initials="NK" color="teal" small /></div><span>Trusted by teams moving<br /><strong>12,000+ deliveries every week</strong></span></div></section><section className="login-card"><div className="login-card-header"><div className="eyebrow accent-eyebrow">Welcome back</div><h2>Sign in to lastmile.</h2><p>Choose your workspace to continue.</p></div><div className="login-roles">{[['customer', UserRound, 'Customer', 'Send and track shipments'], ['agent', Truck, 'Agent', 'Manage your delivery route'], ['admin', ShieldCheck, 'Admin', 'Run the operations center']].map(([value, Icon, title, description]) => <button key={value as string} className={`login-role ${role === value ? 'selected' : ''}`} onClick={() => handleRole(value as Role)}><span className={`login-role-icon workspace-${value}`}><Icon size={17} /></span><span><strong>{title as string}</strong><small>{description as string}</small></span><span className="login-radio" /></button>)}</div><label className="login-label">Work email<input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" /></label><label className="login-label">Password<div className="password-input"><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" /><button type="button">Forgot?</button></div></label>{error && <p className="login-error">{error}</p>}<button className="button button-primary full-width login-submit" onClick={handleLogin} disabled={loading}>{loading ? 'Signing you in…' : `Continue to ${role} workspace`} {!loading && <ArrowRight size={16} />}</button><p className="login-terms">By continuing, you agree to our <span>Terms of service</span> and <span>Privacy policy</span>.</p></section></div><div className="login-footer"><span>© 2024 lastmile. Built for the last mile.</span><span><span className="pulse" /> All systems operational</span></div></main>;
+}
+
+export default function HomePage() {
+  const pathname = usePathname();
+  return pathname === '/' || pathname === '/login' ? <LoginScreen /> : <Dashboard />;
 }
