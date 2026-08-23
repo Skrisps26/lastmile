@@ -185,7 +185,8 @@ function FunctionalAgentView({ liveOrders }: { liveOrders: LiveOrder[] }) {
 function Dashboard() {
   const pathname = usePathname();
   const router = useRouter();
-  const role: Role = pathname.includes('/admin') ? 'admin' : pathname.includes('/agent') ? 'agent' : 'customer';
+  const safePath = pathname || '';
+  const role: Role = safePath.includes('/admin') ? 'admin' : safePath.includes('/agent') ? 'agent' : 'customer';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showAdminCreate, setShowAdminCreate] = useState(false);
@@ -220,7 +221,7 @@ function LoginScreen() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to sign in');
       if (data.user?.role !== role.toUpperCase()) throw new Error(`This account belongs to the ${String(data.user?.role || '').toLowerCase()} workspace.`);
-      const redirect = new URLSearchParams(window.location.search).get('redirect');
+      const redirect = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('redirect') : null;
       router.push(redirect || (role === 'customer' ? '/customer' : role === 'agent' ? '/agent' : '/admin'));
     } catch (loginError) { setError(loginError instanceof Error ? loginError.message : 'Unable to sign in'); } finally { setLoading(false); }
   };
@@ -229,5 +230,6 @@ function LoginScreen() {
 
 export default function HomePage() {
   const pathname = usePathname();
-  return pathname === '/' || pathname === '/login' ? <LoginScreen /> : <Dashboard />;
+  const isLoginPage = !pathname || pathname === '/' || pathname === '/login';
+  return isLoginPage ? <LoginScreen /> : <Dashboard />;
 }
