@@ -6,6 +6,14 @@
 
 LastMile is a modern last-mile delivery-management application for booking, dynamic pricing, dispatching, and tracking parcel orders. Customers can create and track shipments with upfront rate calculation, admins manage operational zones, rate cards, and dispatch queues, and delivery agents receive assigned deliveries and progress statuses in real time. The platform is built with Next.js 14 App Router, PostgreSQL (Supabase), Prisma, and Resend notifications.
 
+## Screenshots
+
+### 🔑 Workspace Selection & Multi-Role Login
+![LastMile Login & Workspace Selection](public/screenshots/login-workspace.png)
+
+### 📦 Customer Portal & Live Delivery Dashboard
+![LastMile Customer Portal & Dispatch Timeline](public/screenshots/customer-dashboard.png)
+
 ## Tech stack
 
 - Next.js 14 App Router and React 18
