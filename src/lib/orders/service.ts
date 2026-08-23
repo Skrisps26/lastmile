@@ -18,6 +18,7 @@ import {
 import { lookupPincode, PincodeNotServiceableError } from '@/lib/rate-engine/detector';
 import { computeRateQuote } from '@/lib/rate-engine/calculator';
 import { type AuthSessionUser } from '@/lib/auth/jwt';
+import { releaseAgentOrder } from '@/lib/agents/assignment';
 
 export class OrderNotFoundError extends Error {
   public readonly orderId: string;
@@ -276,6 +277,11 @@ export async function transitionOrderStatus(
       },
     },
   });
+
+  // 5.1 Release agent load if order reached terminal or failed state
+  if (['DELIVERED', 'FAILED', 'CANCELLED'].includes(targetStatus) && order.assignedAgentId) {
+    await releaseAgentOrder(order.id, order.assignedAgentId);
+  }
 
   // 6. Return Full Updated Order with Projected Current Status
   const updatedOrder = await prisma.order.findUnique({
@@ -595,14 +601,25 @@ export async function queryOrders(
   // Build where conditions
   const where: any = {};
 
-  // Customer RBAC restriction
+  // Customer and Agent RBAC restrictions
   if (requestingUser && requestingUser.role === 'CUSTOMER') {
     where.customerId = requestingUser.userId;
+  } else if (requestingUser && requestingUser.role === 'AGENT') {
+    if (filters.assignedAgentId) {
+      where.assignedAgentId = filters.assignedAgentId;
+    } else {
+      const agentProfile = await prisma.deliveryAgentProfile.findUnique({
+        where: { userId: requestingUser.userId },
+      });
+      if (agentProfile) {
+        where.assignedAgentId = agentProfile.id;
+      }
+    }
   } else if (filters.customerId) {
     where.customerId = filters.customerId;
   }
 
-  if (filters.assignedAgentId) {
+  if (filters.assignedAgentId && (!requestingUser || requestingUser.role !== 'AGENT')) {
     where.assignedAgentId = filters.assignedAgentId;
   }
 
