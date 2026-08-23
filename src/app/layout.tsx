@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'LastMile Logistics Platform',
-  description: 'Enterprise Hyperlocal Last-Mile Logistics Management Platform',
+  title: 'lastmile. | Logistics, without the guesswork',
+  description: 'A modern last-mile logistics operations platform.',
 };
 
 export default function RootLayout({
