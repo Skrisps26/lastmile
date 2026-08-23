@@ -38,8 +38,8 @@ Data flow:
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Core Setup, Database & Auth | Project initialization, Git setup, Prisma schema, DB migrations & seed, JWT auth & RBAC | none | PLANNED |
-| M2 | Dynamic Zones & Rate Engine (R1) | Pincode-to-zone lookup, rate cards, volumetric calculation, quotation API, unit tests | M1 | PLANNED |
+| M1 | Core Setup, Database & Auth | Project initialization, Git setup, Prisma schema, DB migrations & seed, JWT auth & RBAC | none | DONE |
+| M2 | Dynamic Zones & Rate Engine (R1) | Pincode-to-zone lookup, rate cards, volumetric calculation, quotation API, unit tests | M1 | DONE |
 | M3 | Order Lifecycle & History Ledger (R2) | Order booking, append-only history ledger, state transition validation, failed reschedule | M1, M2 | PLANNED |
 | M4 | Agent Management & Auto-Dispatch (R3) | Agent profiles, zone mappings, availability toggle, auto-assignment algorithm | M1, M3 | PLANNED |
 | M5 | Centralized Notification Pipeline (R4)| Transition event hooks, email templating, Resend/Brevo client & mock logger | M3 | PLANNED |
