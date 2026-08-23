@@ -336,6 +336,9 @@ export async function transitionOrderStatus(
   };
 }
 
+/** Compatibility alias for integrations using the original service name. */
+export const updateOrderStatus = transitionOrderStatus;
+
 /**
  * Reschedules a delivery for a failed order.
  * Updates scheduledDate on Order and appends a 'RESCHEDULED' ledger event.

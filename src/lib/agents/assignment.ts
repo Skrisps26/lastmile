@@ -15,11 +15,33 @@ import {
   AgentStatus,
 } from './types';
 
+// Serialize assignments for the same order in a Node process. This prevents
+// SQLite write-lock storms and duplicate work; the conditional claim below is
+// still required for requests arriving through separate processes.
+const assignmentLocks = new Map<string, Promise<void>>();
+
+async function withAssignmentLock<T>(orderId: string, work: () => Promise<T>): Promise<T> {
+  const previous = assignmentLocks.get(orderId) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => { release = resolve; });
+  assignmentLocks.set(orderId, previous.then(() => current));
+  await previous;
+  try {
+    return await work();
+  } finally {
+    release();
+    if (assignmentLocks.get(orderId) === current) assignmentLocks.delete(orderId);
+  }
+}
+
 /**
  * Automatically assigns an unassigned order to an available delivery agent
  * operating in the drop zone (or pickup zone) with load-balanced ranking.
  */
 export async function autoAssignOrder(orderId: string): Promise<AutoAssignResult> {
+  // Different orders can contend for the same agent capacity counter, so the
+  // critical section is global within this process.
+  return withAssignmentLock('all-assignments', async () => {
   // 1. Fetch Order with Zones and Status History
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -39,17 +61,17 @@ export async function autoAssignOrder(orderId: string): Promise<AutoAssignResult
   // 2. Validate Current Order Status
   const currentStatus = deriveCurrentStatus(order.statusHistory);
 
-  if (order.assignedAgentId && currentStatus !== 'RESCHEDULED') {
-    return {
-      success: false,
-      reason: `Order is already assigned to an agent (status: '${currentStatus}').`,
-    };
-  }
-
   if (currentStatus !== 'CREATED' && currentStatus !== 'RESCHEDULED') {
     return {
       success: false,
       reason: `Order cannot be assigned in status '${currentStatus}'. Must be in 'CREATED' or 'RESCHEDULED'.`,
+    };
+  }
+
+  if (order.assignedAgentId && currentStatus !== 'RESCHEDULED') {
+    return {
+      success: false,
+      reason: `Order is already assigned to an agent (status: '${currentStatus}').`,
     };
   }
 
@@ -109,20 +131,33 @@ export async function autoAssignOrder(orderId: string): Promise<AutoAssignResult
 
   // 4. Atomic Transaction: Assign Order, Increment Agent Load, Append Event
   const result = await prisma.$transaction(async (tx) => {
-    const updatedOrder = await tx.order.update({
-      where: { id: order.id },
+    const claim = await tx.order.updateMany({
+      where: {
+        id: order.id,
+        assignedAgentId: currentStatus === 'RESCHEDULED' ? order.assignedAgentId : null,
+      },
       data: {
         assignedAgentId: selectedAgent.id,
       },
     });
 
-    await tx.deliveryAgentProfile.update({
-      where: { id: selectedAgent.id },
+    if (claim.count !== 1) return null;
+
+    const agentClaim = await tx.deliveryAgentProfile.updateMany({
+      where: {
+        id: selectedAgent.id,
+        status: 'AVAILABLE',
+        activeOrdersCount: { lt: selectedAgent.maxCapacity },
+      },
       data: {
-        activeOrdersCount: newActiveCount,
+        activeOrdersCount: { increment: 1 },
         status: newAgentStatus,
       },
     });
+
+    if (agentClaim.count !== 1) {
+      throw new Error('Selected delivery agent became unavailable during assignment.');
+    }
 
     await tx.orderStatusHistory.create({
       data: {
@@ -143,8 +178,12 @@ export async function autoAssignOrder(orderId: string): Promise<AutoAssignResult
       },
     });
 
-    return updatedOrder;
+    return tx.order.findUnique({ where: { id: order.id } });
   });
+
+  if (!result) {
+    return { success: false, reason: 'Order was already assigned by another request.' };
+  }
 
   return {
     success: true,
@@ -166,6 +205,7 @@ export async function autoAssignOrder(orderId: string): Promise<AutoAssignResult
       currentStatus: 'ASSIGNED',
     },
   };
+  });
 }
 
 /**
