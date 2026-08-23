@@ -1,8 +1,9 @@
 // /home/skrisps/lastmile/prisma/schema.prisma
 
 datasource db {
-  provider = "sqlite" // Set to "postgresql" in production via env or schema toggle
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
