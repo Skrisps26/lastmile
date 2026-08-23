@@ -1,3 +1,3 @@
-import { Dashboard } from '../page';
+import HomePage from '../page';
 
-export default Dashboard;
+export default HomePage;
