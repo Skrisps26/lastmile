@@ -6,6 +6,8 @@ import { USER_ROLES } from '@/lib/auth/constants';
 import { getAllAgents } from '@/lib/agents/service';
 import { queryAgentsSchema } from '@/lib/agents/schemas';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/agents
  * Lists all delivery agents with their operational status, assigned zones, and current load.

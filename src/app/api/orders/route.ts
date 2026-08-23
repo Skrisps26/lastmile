@@ -7,6 +7,8 @@ import { createOrderSchema, orderQuerySchema } from '@/lib/orders/schemas';
 import { createOrder, queryOrders } from '@/lib/orders/service';
 import { PincodeNotServiceableError } from '@/lib/rate-engine/detector';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/orders
  * Creates a new order with dynamic rate calculation and initial CREATED ledger entry.

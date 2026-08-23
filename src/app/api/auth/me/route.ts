@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { extractTokenFromRequest } from '@/lib/auth/extract';
 import { verifySessionToken } from '@/lib/auth/jwt';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest | Request) {
   try {
     const token = extractTokenFromRequest(req);
