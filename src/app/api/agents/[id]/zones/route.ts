@@ -1,6 +1,7 @@
-// /home/skrisps/lastmile/src/app/api/agents/[id]/zones/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+
 import { requireRole } from '@/lib/auth/guard';
 import { USER_ROLES } from '@/lib/auth/constants';
 import { setAgentZonesSchema } from '@/lib/agents/schemas';

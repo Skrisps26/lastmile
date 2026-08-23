@@ -1,6 +1,7 @@
-// /home/skrisps/lastmile/src/app/api/agents/[id]/status/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+
 import { requireRole } from '@/lib/auth/guard';
 import { USER_ROLES } from '@/lib/auth/constants';
 import { updateAgentStatusSchema } from '@/lib/agents/schemas';
