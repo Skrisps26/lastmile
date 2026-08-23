@@ -1,22 +1,20 @@
-// /home/skrisps/lastmile/src/app/api/pincodes/[pincode]/zone/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
 import { validateServiceability } from '@/lib/rate-engine/detector';
 
 export async function GET(
   req: NextRequest | Request,
-  { params }: { params: { pincode: string } }
+  { params }: { params: { id?: string; pincode?: string } }
 ) {
   try {
-    const { pincode } = params;
-    const result = await validateServiceability(pincode);
+    const id = params.id ?? params.pincode ?? '';
+    const result = await validateServiceability(id);
 
     if (!result.serviceable) {
       return NextResponse.json(
         {
           serviceable: false,
           pincode: result.pincode,
-          error: result.error || `Pincode '${pincode}' is not serviceable`,
+          error: result.error || `Pincode '${id}' is not serviceable`,
         },
         { status: 404 }
       );
@@ -32,7 +30,7 @@ export async function GET(
       { status: 200 }
     );
   } catch (error: any) {
-    console.error('GET /api/pincodes/:pincode/zone error:', error);
+    console.error('GET /api/pincodes/:id/zone error:', error);
     return NextResponse.json(
       { error: 'Failed to resolve pincode zone serviceability' },
       { status: 500 }

@@ -9,7 +9,7 @@ import { GET as getZoneByIdHandler, PUT as putZoneHandler, DELETE as deleteZoneH
 import { GET as getPincodesHandler, POST as postPincodesHandler } from '@/app/api/pincodes/route';
 import { POST as postBulkPincodesHandler } from '@/app/api/pincodes/bulk/route';
 import { GET as getPincodeByIdHandler, PUT as putPincodeHandler, DELETE as deletePincodeHandler } from '@/app/api/pincodes/[id]/route';
-import { GET as getPincodeZoneHandler } from '@/app/api/pincodes/[pincode]/zone/route';
+import { GET as getPincodeZoneHandler } from '@/app/api/pincodes/[id]/zone/route';
 import { GET as getRateCardsHandler, POST as postRateCardsHandler } from '@/app/api/rates/cards/route';
 import { GET as getRateCardByIdHandler, PUT as putRateCardHandler, DELETE as deleteRateCardHandler } from '@/app/api/rates/cards/[id]/route';
 import { createSessionToken } from '@/lib/auth/jwt';
