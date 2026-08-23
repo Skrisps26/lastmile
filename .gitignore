@@ -48,3 +48,4 @@ test-results/
 .agents/
 .agents/**/trash/
 .agents/**/*.log
+.codex/
