@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 NODE_OPTIONS=--require=./scripts/force-next-wasm.cjs next dev",
-    "build": "prisma generate && NEXT_IGNORE_INCORRECT_LOCKFILE=1 NODE_OPTIONS=--require=./scripts/force-next-wasm.cjs next build",
+    "dev": "next dev",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
@@ -41,7 +41,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@next/swc-wasm-nodejs": "^14.2.33",
     "@testing-library/jest-dom": "^6.6.2",
     "@testing-library/react": "^16.0.1",
     "@types/bcryptjs": "^2.4.6",
