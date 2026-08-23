@@ -18,6 +18,7 @@ import {
   Filter,
   Gauge,
   LayoutDashboard,
+  Mail,
   MapPin,
   Menu,
   MoreHorizontal,
@@ -77,10 +78,10 @@ function Sidebar({ role, mobileOpen, setMobileOpen, onLogout }: { role: Role; mo
   </aside>;
 }
 
-function Topbar({ role, setMobileOpen, onLogout }: { role: Role; setMobileOpen: (open: boolean) => void; onLogout: () => void }) {
+function Topbar({ role, setMobileOpen, onLogout, onTestEmail }: { role: Role; setMobileOpen: (open: boolean) => void; onLogout: () => void; onTestEmail: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const name = role === 'customer' ? 'Aarav Kapoor' : role === 'agent' ? 'Arjun Menon' : 'Riya Shah';
-  return <header className="topbar"><button className="mobile-menu" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div className="topbar-search"><Search size={17} /><input placeholder={role === 'admin' ? 'Search orders, agents, tracking IDs...' : 'Search your shipments...'} /></div><div className="topbar-actions"><button className="icon-button" onClick={() => alert('You are all caught up.')}><Bell size={18} /><span className="notification-dot" /></button><div className="topbar-divider" /><div className="account-menu"><button className="topbar-user" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen}><Avatar initials={role === 'customer' ? 'AK' : role === 'agent' ? 'AM' : 'RS'} color="indigo" small /><span>{name}</span><ChevronDown size={14} /></button>{menuOpen && <div className="account-dropdown"><div className="account-dropdown-head"><Avatar initials={role === 'customer' ? 'AK' : role === 'agent' ? 'AM' : 'RS'} color="indigo" small /><div><strong>{name}</strong><span>{role === 'customer' ? 'Business account' : role === 'agent' ? 'Delivery partner' : 'Operations lead'}</span></div></div><button onClick={() => alert('Profile settings are coming soon.')}>View profile</button><button onClick={() => alert('Account settings are coming soon.')}>Account settings</button><button className="dropdown-logout" onClick={onLogout}>Log out</button></div>}</div></div></header>;
+  return <header className="topbar"><button className="mobile-menu" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div className="topbar-search"><Search size={17} /><input placeholder={role === 'admin' ? 'Search orders, agents, tracking IDs...' : 'Search your shipments...'} /></div><div className="topbar-actions"><button className="button button-ghost" style={{ padding: '6px 12px', fontSize: '11px', gap: '6px' }} onClick={onTestEmail}><Mail size={14} /> Test Email</button><button className="icon-button" onClick={() => alert('You are all caught up.')}><Bell size={18} /><span className="notification-dot" /></button><div className="topbar-divider" /><div className="account-menu"><button className="topbar-user" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen}><Avatar initials={role === 'customer' ? 'AK' : role === 'agent' ? 'AM' : 'RS'} color="indigo" small /><span>{name}</span><ChevronDown size={14} /></button>{menuOpen && <div className="account-dropdown"><div className="account-dropdown-head"><Avatar initials={role === 'customer' ? 'AK' : role === 'agent' ? 'AM' : 'RS'} color="indigo" small /><div><strong>{name}</strong><span>{role === 'customer' ? 'Business account' : role === 'agent' ? 'Delivery partner' : 'Operations lead'}</span></div></div><button onClick={() => alert('Profile settings are coming soon.')}>View profile</button><button onClick={() => alert('Account settings are coming soon.')}>Account settings</button><button className="dropdown-logout" onClick={onLogout}>Log out</button></div>}</div></div></header>;
 }
 
 function MetricCard({ label, value, change, icon: Icon, accent }: { label: string; value: string; change?: string; icon: typeof Package; accent: string }) {
@@ -128,6 +129,84 @@ function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCr
     } catch (createError) { setError(createError instanceof Error ? createError.message : 'Unable to create customer'); } finally { setSaving(false); }
   };
   return <div className="modal-backdrop" onClick={onClose}><div className="modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><div className="eyebrow accent-eyebrow">Customer directory</div><h2>Add a customer</h2></div><button className="icon-button subtle" onClick={onClose}><X size={19} /></button></div><div className="modal-body"><label>Full name<input value={form.name} onChange={(event) => update('name', event.target.value)} placeholder="e.g. Meera Iyer" /></label><label>Email address<input type="email" value={form.email} onChange={(event) => update('email', event.target.value)} placeholder="meera@company.com" /></label><div className="two-fields"><label>Phone<input value={form.phone} onChange={(event) => update('phone', event.target.value)} placeholder="10-digit number" /></label><label>Temporary password<input type="password" value={form.password} onChange={(event) => update('password', event.target.value)} placeholder="At least 6 characters" /></label></div>{error && <p className="login-error">{error}</p>}<button className="button button-primary full-width" disabled={saving} onClick={submit}>{saving ? 'Creating customer…' : 'Create customer'} {!saving && <Check size={16} />}</button></div></div></div>;
+}
+
+function TestEmailModal({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('Valued Customer');
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState('');
+
+  const handleSend = async () => {
+    if (!email.trim()) {
+      setError('Please enter a destination email address');
+      return;
+    }
+    setSending(true);
+    setError('');
+    setResult(null);
+    try {
+      const res = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), name: name.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to send test email');
+      }
+      setResult(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to send test email');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div>
+            <div className="eyebrow accent-eyebrow">Email Notification Service</div>
+            <h2>Send Live Test Email</h2>
+          </div>
+          <button className="icon-button subtle" onClick={onClose}><X size={19} /></button>
+        </div>
+        <div className="modal-body">
+          <p style={{ fontSize: '11px', color: '#68758b', margin: '0 0 6px', lineHeight: 1.6 }}>
+            Test real HTML delivery notifications via Resend directly to your inbox.
+          </p>
+          <label>
+            Recipient Name
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex Smith" />
+          </label>
+          <label>
+            Destination Email Address
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="e.g. yourname@gmail.com or delivered@resend.dev"
+            />
+          </label>
+          {error && <p className="login-error">{error}</p>}
+          {result && (
+            <div style={{ background: '#eefaf6', border: '1px solid #c4ede0', borderRadius: '8px', padding: '12px', color: '#177d6d', fontSize: '11px' }}>
+              <strong>✓ Email sent successfully via Resend!</strong>
+              <div style={{ marginTop: '4px', fontSize: '10px', color: '#427568' }}>
+                Resend Message ID: <code>{result.resendId}</code>
+              </div>
+            </div>
+          )}
+          <button className="button button-primary full-width" disabled={sending} onClick={handleSend}>
+            {sending ? 'Sending via Resend…' : 'Send Test Notification'} {!sending && <ArrowRight size={16} />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function CreateShipment({ onClose }: { onClose: () => void }) {
@@ -191,6 +270,7 @@ function Dashboard() {
   const [showCreate, setShowCreate] = useState(false);
   const [showAdminCreate, setShowAdminCreate] = useState(false);
   const [showCustomerCreate, setShowCustomerCreate] = useState(false);
+  const [showTestEmail, setShowTestEmail] = useState(false);
   const [liveOrders, setLiveOrders] = useState<LiveOrder[]>([]);
   useEffect(() => {
     fetch('/api/orders?limit=50')
@@ -202,7 +282,7 @@ function Dashboard() {
   const exportOrders = () => { const header = 'Tracking ID,Route,Status,Amount,Updated'; const rows = liveOrders.map((order) => [order.trackingNumber, order.route, order.status, order.amount, order.date].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')); const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `lastmile-orders-${new Date().toISOString().slice(0, 10)}.csv`; anchor.click(); URL.revokeObjectURL(url); };
   const addOrder = (order: any) => setLiveOrders((current) => [{ id: order.id, trackingNumber: order.trackingNumber, route: `${order.pickupPincode} → ${order.dropPincode}`, status: 'Created', date: 'Just now', amount: `₹${Number(order.totalAmount || 0).toLocaleString('en-IN')}`, tone: 'violet', raw: order }, ...current]);
   const content = role === 'customer' ? <CustomerView customerOrders={liveOrders} onCreate={() => setShowCreate(true)} /> : role === 'agent' ? <FunctionalAgentView liveOrders={liveOrders} /> : <AdminView liveOrders={liveOrders} onExport={exportOrders} onNewOrder={() => setShowAdminCreate(true)} onNewCustomer={() => setShowCustomerCreate(true)} />;
-  return <div className="app-shell"><Sidebar role={role} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} onLogout={handleLogout} /><div className="app-main"><Topbar role={role} setMobileOpen={setMobileOpen} onLogout={handleLogout} /><main className="main-content">{content}</main><footer className="app-footer"><span>lastmile<span className="brand-dot">.</span> operations platform</span><span>All systems operational <span className="pulse" /></span></footer></div>{showCreate && <ConnectedShipmentModal onCreated={addOrder} onClose={() => setShowCreate(false)} />}{showAdminCreate && <ConnectedShipmentModal adminMode onCreated={addOrder} onClose={() => setShowAdminCreate(false)} />}{showCustomerCreate && <CreateCustomerModal onCreated={() => undefined} onClose={() => setShowCustomerCreate(false)} />}</div>;
+  return <div className="app-shell"><Sidebar role={role} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} onLogout={handleLogout} /><div className="app-main"><Topbar role={role} setMobileOpen={setMobileOpen} onLogout={handleLogout} onTestEmail={() => setShowTestEmail(true)} /><main className="main-content">{content}</main><footer className="app-footer"><span>lastmile<span className="brand-dot">.</span> operations platform</span><span>All systems operational <span className="pulse" /></span></footer></div>{showCreate && <ConnectedShipmentModal onCreated={addOrder} onClose={() => setShowCreate(false)} />}{showAdminCreate && <ConnectedShipmentModal adminMode onCreated={addOrder} onClose={() => setShowAdminCreate(false)} />}{showCustomerCreate && <CreateCustomerModal onCreated={() => undefined} onClose={() => setShowCustomerCreate(false)} />}{showTestEmail && <TestEmailModal onClose={() => setShowTestEmail(false)} />}</div>;
 }
 
 function LoginScreen() {
