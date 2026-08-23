@@ -14,6 +14,12 @@ LastMile is a modern last-mile delivery-management application for booking, dyna
 ### 📦 Customer Portal & Live Delivery Dashboard
 ![LastMile Customer Portal & Dispatch Timeline](public/screenshots/customer-dashboard.png)
 
+### 🚚 Delivery Agent Console & Route Progress
+![LastMile Delivery Agent Console](public/screenshots/agent-dashboard.png)
+
+### 🎛️ Admin Operations Command Center
+![LastMile Admin Command Center](public/screenshots/admin-dashboard.png)
+
 ## Tech stack
 
 - Next.js 14 App Router and React 18
